@@ -3,20 +3,20 @@
 #include <pthread.h>
 #include <unistd.h>
 
-#define NUM_TERMS 20 // 費式數列的項數
+#define NUM_TERMS 20 // Fibonacci 項數
 
 typedef struct {
     int totalTerms;
     int currentTerm;
     pthread_mutex_t lock;
-    int done; // 計算是否完成的標誌
+    int done; // 確認是否完成
 } Progress;
 
 void printProgress(Progress *progress) {
     while (1) {
         pthread_mutex_lock(&(progress->lock));
         int progressPercent = (progress->currentTerm * 100) / progress->totalTerms;
-        int isDone = progress->done; // 檢查是否已經完成
+        int isDone = progress->done; // shared variable
         pthread_mutex_unlock(&(progress->lock));
 
         printf("\rProgress: [");
@@ -25,12 +25,9 @@ void printProgress(Progress *progress) {
         printf("] %d%%", progressPercent);
         fflush(stdout);
 
-        if (isDone) break; // 如果計算完成，退出進度條顯示
-        usleep(100000); // 100ms 延遲以更新進度
+        if (isDone && progressPercent == 100) break; // 做完退出
+        usleep(100000); 
     }
-
-    // 確保最後顯示100%
-    printf("\rProgress: [##################################################] 100%%\n");
 }
 
 void *fibonacciThread(void *arg) {
@@ -47,11 +44,12 @@ void *fibonacciThread(void *arg) {
         progress->currentTerm = i;
         pthread_mutex_unlock(&(progress->lock));
 
-        usleep(200000); // 模擬計算耗時
+        usleep(200000);
     }
 
     pthread_mutex_lock(&(progress->lock));
-    progress->done = 1; // 標誌計算完成
+    progress->currentTerm = progress->totalTerms; // 做完了
+    progress->done = 1;  // 全部做完了，修改變數
     pthread_mutex_unlock(&(progress->lock));
 
     printf("\nFibonacci Sequence: ");
@@ -75,14 +73,14 @@ int main() {
         .totalTerms = NUM_TERMS,
         .currentTerm = 0,
         .lock = PTHREAD_MUTEX_INITIALIZER,
-        .done = 0 // 初始化為未完成狀態
+        .done = 0 // 初始化
     };
 
-    // 創建執行費式數列和顯示進度的執行緒
+    // 建Fib和ProgressBar的thread
     pthread_create(&fib_tid, NULL, fibonacciThread, &progress);
     pthread_create(&progress_tid, NULL, progressThread, &progress);
 
-    // 等待執行緒完成
+    // 等待thread完成
     pthread_join(fib_tid, NULL);
     pthread_join(progress_tid, NULL);
 
