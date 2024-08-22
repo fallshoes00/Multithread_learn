@@ -37,18 +37,18 @@ void *fibonacciThread(void *arg) {
     fib[0] = 0;
     fib[1] = 1;
 
-    for (int i = 2; i < NUM_TERMS; i++) {
-        fib[i] = fib[i-1] + fib[i-2];
+    for (int i = 0; i < NUM_TERMS; i++) {
+        if(i>1)
+            fib[i] = fib[i-1] + fib[i-2];
 
         pthread_mutex_lock(&(progress->lock));
-        progress->currentTerm = i;
+        progress->currentTerm += 1;
         pthread_mutex_unlock(&(progress->lock));
 
         usleep(200000);
     }
 
     pthread_mutex_lock(&(progress->lock));
-    progress->currentTerm = progress->totalTerms; // 做完了
     progress->done = 1;  // 全部做完了，修改變數
     pthread_mutex_unlock(&(progress->lock));
 
